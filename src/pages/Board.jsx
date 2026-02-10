@@ -34,7 +34,7 @@ const columns = [
     { id: 'todo', title: 'To Do', color: 'bg-slate-200' },
     { id: 'in-progress', title: 'In Progress', color: 'bg-amber-400' },
     { id: 'review', title: 'Review', color: 'bg-blue-400' },
-    // { id: 'done', title: 'Done', color: 'bg-green-500' },
+     { id: 'done', title: 'Done', color: 'bg-green-500' },
 ];
 
 export default function Board() {
