@@ -34,14 +34,14 @@ const columns = [
     { id: 'todo', title: 'To Do', color: 'bg-slate-200' },
     { id: 'in-progress', title: 'In Progress', color: 'bg-amber-400' },
     { id: 'review', title: 'Review', color: 'bg-blue-400' },
-     { id: 'done', title: 'Done', color: 'bg-green-500' },
+ { id: 'done', title: 'Done', color: 'bg-green-500' },
 ];
 
 export default function Board() {
     const { projectId } = useParams();
     const { getTasks, createTask, updateTask, updateTaskStatus, deleteTask, projects } = useProjects();
     const { hasPermission, role } = usePermission();
-    const { fetchUsers } = useAuth();
+    const { fetchUsers, user } = useAuth();
     const [tasks, setTasks] = useState([]);
     const [project, setProject] = useState(null);
     const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -245,6 +245,11 @@ export default function Board() {
         reader.readAsText(file);
     };
 
+    // Filter tasks for 'member' role to only show their own assigned tasks
+    const visibleTasks = role === 'member'
+        ? tasks.filter(task => task.assignedTo === user?.uid)
+        : tasks;
+
     return (
         <div className="h-full flex flex-col space-y-8 animate-in fade-in duration-700">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -272,19 +277,7 @@ export default function Board() {
                             <Trello size={16} className="sm:hidden" />
                             <Trello size={18} className="hidden sm:block" />
                         </button>
-                        <button
-                            onClick={() => setViewMode('grid')}
-                            title="Grid View"
-                            className={cn(
-                                "p-1.5 sm:p-2 rounded-lg sm:rounded-xl transition-all duration-200",
-                                viewMode === 'grid'
-                                    ? "bg-white dark:bg-slate-700 text-primary shadow-sm"
-                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                            )}
-                        >
-                            <LayoutGrid size={16} className="sm:hidden" />
-                            <LayoutGrid size={18} className="hidden sm:block" />
-                        </button>
+                        
                         <button
                             onClick={() => setViewMode('table')}
                             title="Table View"
@@ -413,7 +406,7 @@ export default function Board() {
                                     <span className={`w-2 h-6 rounded-full ${column.color}`}></span>
                                     <h3 className="font-bold text-slate-700 dark:text-slate-300 transition-colors">{column.title}</h3>
                                     <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs font-bold px-2 py-0.5 rounded-lg transition-colors">
-                                        {tasks.filter(t => t.status === column.id).length}
+                                        {visibleTasks.filter(t => t.status === column.id).length}
                                     </span>
                                 </div>
                                 <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
@@ -422,7 +415,7 @@ export default function Board() {
                             </div>
 
                             <div className="flex-1 flex flex-col gap-4 min-h-[500px]">
-                                {tasks.filter(t => t.status === column.id).map((task) => (
+                                {visibleTasks.filter(t => t.status === column.id).map((task) => (
                                     <TaskCard
                                         key={task.id}
                                         task={task}
@@ -460,7 +453,7 @@ export default function Board() {
 
             {viewMode === 'grid' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {tasks.map(task => (
+                    {visibleTasks.map(task => (
                         <TaskCard
                             key={task.id}
                             task={task}
@@ -511,7 +504,7 @@ export default function Board() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                                {tasks.map((task) => (
+                                {visibleTasks.map((task) => (
                                     <tr key={task.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all group">
                                         <td className="px-8 py-6">
                                             <div className="flex flex-col gap-1">
@@ -571,9 +564,11 @@ export default function Board() {
                                                                     'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                                                     )}
                                                 >
-                                                    {columns.map(col => (
-                                                        <option key={col.id} value={col.id}>{col.title}</option>
-                                                    ))}
+                                                    {columns
+                                                        .filter(col => !(role === 'member' && col.id === 'done'))
+                                                        .map(col => (
+                                                            <option key={col.id} value={col.id}>{col.title}</option>
+                                                        ))}
                                                 </select>
                                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
                                                     <ChevronRight size={12} className="rotate-90" />
@@ -647,7 +642,7 @@ export default function Board() {
             )}
 
             {viewMode === 'calendar' && (
-                <TaskCalendar tasks={tasks} />
+                <TaskCalendar tasks={visibleTasks} />
             )}
 
             <ProjectChat
